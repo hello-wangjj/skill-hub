@@ -20,6 +20,37 @@
 
 ---
 
+## gp_search.py — Google Patents 结构化检索（Step 3–4 轻量初筛优先；Step 5 §B 降级 / 海外点名）
+
+| 脚本 | 作用 |
+|------|------|
+| **`gp_search.py`** | Google Patents 公开页结构化检索（免登录、免 key、**纯标准库**，无新依赖）。stdout 一行 **`GP_SEARCH_MD:`**（报告路径）+ 一行 **`GP_SEARCH_JSON:`**（hits 含 `pub_number`/`title`/`applicant`/`inventors`/`link`/`country`/`kind`/`snippet`/`pdf_url` 等 15 字段）；stderr `GP_SEARCH_NOTE:` 为进度。报告写入 `outputs/patent-search/SEARCH-YYYYMMDD-HHMMSS.md`（从本目录向上找仓库根或已有 `outputs/`；环境变量 **`PATENT_SEARCH_OUTPUT_DIR`** 覆盖输出目录）。 |
+| **`google_patents/`** | 检索内核包（query 构造 / client / results 解析 / detail / errors），与上游 patent-search、patent-reader 两个子技能内的同名包**内容一致**——后续若从上游更新，须整包同步，勿混拷。 |
+| **`emit_search_report.py` / `search_config.py`** | 报告渲染与配置（技能根 `config.yaml` 可选：`google_patents.num` 每页条数、`google_patents.timeout_s` 超时秒；缺失时默认 10 / 20，PyYAML 可选）。 |
+
+**判读（stderr ≠ 失败）**：以退出码与 stdout 前缀为准。失败时 stderr `GP_SEARCH_ERROR: reason=…`：`blocked`（**退出码 4**，限流/拦截）→ 本轮海外检索结束，不重试、不换参数再发；`unavailable`（连不上）/ `bad_response`（接口可能改版）→ 退出码 1，按 reason 如实说明，不写成 0 条。
+
+**门禁（与上游检索包一致）**：一次运行 = 一个请求，**不重试、不自行翻页**（`--page` 仅在用户明说「下一页」时加）；检索词**先译成英文并补同义词**（正例 `(battery OR cell) (thermal runaway)`；反例 直接填中文）；用户中文原意写进 `--note`。轻量初筛**每案至多 5 次**请求（见 `prompts/patent_points_analyzer.md`「检索渠道」）。
+
+**snippet 不是摘要**：`GP_SEARCH_JSON` 的 `hits[].snippet` 只是命中片段，不足以支撑「高度相似」判断或 4.x 论证——先打开 `link` 核对，或取全文。报告「完整性」一行已写明是否末页，**一页结果不得说成完整清单**。
+
+### 用法
+
+```bash
+# Step 3–4 轻量初筛：全球不限局别（默认含 CN 与美欧日韩）
+python tools/gp_search.py -q "(lidar OR laser radar) (point cloud) (clustering)" --note "点云聚类初筛"
+
+# Step 5 §B 降级（仅国知局已判失败后，至多一次）：
+python tools/gp_search.py -q "thermal runaway warning" --country CN --note "查新降级 §B"
+
+# 海外点名 / 限定局别、状态、日期：
+python tools/gp_search.py -q "(battery OR cell) (thermal runaway)" --country US,EP,JP,KR,WO --after 2020 --status grant --note "电池热失控"
+```
+
+字段过滤：`--title` / `--abstract` / `--claims`（字段内布尔）、`--cpc H01M10/48/low`（可重复）、`--assignee` / `--inventor`（可重复）、`--type patent|design`、`--status grant|application`、`--language`、`--date-field priority|filing|publication`、`--before`、`--sort new|old`、`--num`（1–100）、`--page`、`--timeout`。美国、欧洲无实用新型一档；查实用新型按普通专利查，不加 `--type`。
+
+---
+
 ## Office 文档（Word / PPT）转成可扫描文本
 
 用本仓库 **`docx_to_md.py`**、**`pptx_to_md.py`**（纯 Python + 仓库根目录 `requirements.txt`），见下文各节；与 `SKILL.md`「工具与数据来源」一致。

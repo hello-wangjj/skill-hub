@@ -106,10 +106,12 @@
    - 强化「中国」语境时可加：`中国`、`site:.cn`、`专利`、`CN`（与专利号区分使用）等，以实际命中为准。
    - 通过 **WebSearch** 或浏览器检索；优先可打开且与标题/作者匹配的链接。
 2. **中国专利公开文献（补充）**：[Google Patents](https://patents.google.com/)。
+   - **结构化优先（仅当 §A 已判失败）**：第一轮 `hint=skip_epub` 等触发降级后，**至多一次** `Bash` 运行 `tools/gp_search.py -q "英文关键词组" --country CN --note "查新降级 §B"`——命中经 stdout `GP_SEARCH_JSON:` 直接给出公开号、标题、申请人与 `patents.google.com/patent/…` 链接，可作 §B 补条。退出码 4（`reason=blocked`）即结束本渠道并照实说明，不重试；退出码 1（`unavailable`）照实说明后走下方 WebSearch 口径。上游「中国文献不走 Google Patents」门禁的**前提是公布站可用**；本处为公布站已失败后的降级语境，须在查新笔记标注「国知局本轮失败，Google Patents 补充检索」。
    - **发明**：界面/参数倾向 **Patent（`type=PATENT`）** + `country:CN`；公开号常见 `CN…A` / `CN…B`。第二轮分类号可拼 `CPC=B01J20/low`（见 3b.5，外网不通则跳过）。
    - **实用新型**：**无独立 Utility Model 类型**；用 Patent 域 + 关键词「实用新型」或公开号 `…U` 收窄，**类型过滤仍以国知局 A 渠道为准**。
    - **外观**：用 **Design（`type=DESIGN`）** + `country:CN`；公开号常见 `…S`。可把 LOC 号（如 `26-05`）当补充词。
-   - 每条使用**稳定著录页 URL**；查询串可参考 `tools/patent_type.py` 的 `google_patents_websearch_query`。
+   - 每条使用**稳定著录页 URL**；查询串可参考 `tools/patent_type.py` 的 `google_patents_websearch_query`。gp_search 与 WebSearch 均不可用时，才以手工拼 URL 兜底。
+   - **红线不变**：§B/gp_search 补条**不得替换** §A 已命中条目的 `link`，不得挤入 3.1 精排主池口径（见「分析要求」与 3b.6）；海外公开号的类型标签可参考 `tools/patent_type.py` 的 `infer_overseas_patent_type`（仅著录标注用，不等同各局法律类型）。
 3. **其它来源**：英文文献、非中国专利等可继续用 Google Patents、出版社页面、DOI、arXiv 等 + WebSearch。
 4. **关键词构造**：技术方案核心术语、应用场景与方法名称，可组合 2–3 组查询。
 

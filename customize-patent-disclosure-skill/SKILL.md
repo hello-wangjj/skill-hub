@@ -1,7 +1,8 @@
 ---
 name: customize-patent-disclosure-skill
-description: "面向所内《专利技术交底书》模板的专利挖掘与交底书生成全流程：扫描项目文档挖掘专利点并输出含轻量相似专利初筛的资产清单（用户取舍确认后才成文）、讨论融合、对齐所内 docx 模板（封面元数据表+一名称/二技术领域/三背景技术3.1-3.3/四创新点4.1-4.5含代替方案与逻辑论证/五实施方式/六附图）生成技术交底书、联网查新（按发明/实用新型类型过滤）、公式范式计划与可算性校验、版本化目录交付（vN-说明-时间戳+版本索引）、多件交付附专利簇通俗清单、生成后自检含逻辑闭环/标题贯穿与公式参数一致性。适用于需要按真实交底书模板格式产出的场景；图片类多模态理解与附图核对经 multimodal-vision 子智能体。| Patent mining triage gate + disclosure drafting aligned to an in-house docx template, typed prior-art search, formula-paradigm planning, versioned delivery, and consistency self-check."
-version: "2.2.2"
+description: "面向所内《专利技术交底书》模板的专利挖掘与交底书生成全流程：扫描项目文档挖掘专利点并输出含轻量相似专利初筛（gp_search 全球结构化检索，含美欧日韩及中国）的资产清单（用户取舍确认后才成文）、讨论融合、对齐所内 docx 模板（封面元数据表+一名称/二技术领域/三背景技术3.1-3.3/四创新点4.1-4.5含代替方案与逻辑论证/五实施方式/六附图）生成技术交底书、联网查新（按发明/实用新型类型过滤）、公式范式计划与可算性校验、版本化目录交付（vN-说明-时间戳+版本索引）、多件交付附专利簇通俗清单、生成后自检含逻辑闭环/标题贯穿与公式参数一致性。适用于需要按真实交底书模板格式产出的场景；图片类多模态理解与附图核对经 multimodal-vision 子智能体。| Patent mining triage gate (with structured global prior-art screening via Google Patents, covering US/EP/JP/KR/CN) + disclosure drafting aligned to an in-house docx template, typed prior-art search, formula-paradigm planning, versioned delivery, and consistency self-check."
+version: "2.3.0"
+# 对齐源仓库：handsomestWei/patent-disclosure-skill @ 9c1a3a051e867681ac25680eb606cdffd988fc2b（2026-11-03「检索与解读支持海外专利」；gp_search 工具链与 patent_type 海外推断取自该提交）
 user-invocable: true
 argument-hint: "[可选：项目路径或技术主题关键词]"
 allowed-tools: Read, Write, Edit, Grep, Glob, WebSearch, Bash
@@ -15,7 +16,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, WebSearch, Bash
 
 - **语言**：默认与用户语种一致；专利与法律术语采用行业常用表述。
 - **Python 执行环境（先问，勿自作主张）**：本技能多处需运行 Python 脚本（Office 转换 / 国知局查新 / mermaid 渲染 / Word 导出 / 公式校验）。**首次执行前须询问用户**是否有现成的 uv 环境可用，候选：①用户指定的 uv 项目环境（`uv run --project <路径> …`）；②`uv run --with <依赖>` / `--with-requirements requirements.txt` 隔离环境（**推荐**，免污染）；③系统 `python`（用户明确同意才用）。用户选定后**同一会话/同一案件沿用**，不再重复询问。**禁止**静默落系统默认 python、**禁止**全局 `pip install`。
-- **脚本判读（尤其 Windows）**：stderr 有字 **不等于** 失败。以 **退出码 0** 和机读前缀为准：`EPUB_HITS_JSON:` / `EPUB_MERGE:` / `BROWSER:`、`MERMAID: ok=`、`DOCX: ok=1`、`MATH:`、`omml_text_fallback=`。PowerShell 可能把 stderr 标成 `NativeCommandError` 或乱码；**禁止**因此重跑安装、认定 Word 未生成、或把查新降级 WebSearch。勿用 `2>&1` 把 JSON 混进错误流。
+- **脚本判读（尤其 Windows）**：stderr 有字 **不等于** 失败。以 **退出码 0** 和机读前缀为准：`EPUB_HITS_JSON:` / `EPUB_MERGE:` / `BROWSER:`、`MERMAID: ok=`、`DOCX: ok=1`、`MATH:`、`omml_text_fallback=`、`GP_SEARCH_MD:` / `GP_SEARCH_JSON:`（后两者在 stdout；stderr 的 `GP_SEARCH_NOTE:` 是进度、`GP_SEARCH_ERROR:` 是失败）。PowerShell 可能把 stderr 标成 `NativeCommandError` 或乱码；**禁止**因此重跑安装、认定 Word 未生成、或把查新降级 WebSearch。勿用 `2>&1` 把 JSON 混进错误流。
 - **专利类型**：封面「申报类型」未显式指定时**默认发明**（`invention`）；材料明显更偏产品形状/构造改进时在汇总或预览阶段**反问**是否改实用新型（见 `intake.md`）。查新 `--type` 与之一致。
 - **图片等多模态任务（经 multimodal-vision 子智能体）**：凡需「看图」的场景——Step 2 理解关键图片材料（架构图/流程图/截图）、Step 8 定稿后核对 mermaid PNG 附图、检查图片内敏感信息——委派 **`multimodal-vision`** 子智能体（Agent 工具，`subagent_type: multimodal-vision`）：prompt 给足**图片路径 + 具体问题**（勿泛泛「分析这张图」）；子智能体返回的属**报告推断**，涉及专利点/技术事实的结论须与文本材料**交叉核对**。当前环境无该子智能体时，回退为主代理直接读图。
 - **图示定稿（Step 7）**：**4.2.1 系统框图**/**4.2.3 流程图**用 fenced **mermaid**（**Playwright + 内置 `tools/vendor/mermaid.min.js`** 渲染，与查新共用 `tools/browser.py`，**无需 Node/mmdc/npm**）；步骤号须写进**可见标签**（`S1["S1 …"]`）。执行方式与降级规则见下表「交底书定稿交付」行及 **`tools/README.md`**。
@@ -47,7 +48,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, WebSearch, Bash
 | Word（.docx）→ Markdown + 抽取图片（扫描前） | `Bash` → `python3 ${CLAUDE_SKILL_DIR}/tools/docx_to_md.py --input {path}.docx --output {dir}/{name}.md`；图片默认写入与 `.md` 同级的 `{name}_media/`；需 `pip install -r requirements.txt`（含 mammoth）；复杂版式可改由所内导出 PDF/MD 再扫 |
 | PowerPoint（.pptx）→ Markdown + 抽取图片（扫描前） | `Bash` → `python3 ${CLAUDE_SKILL_DIR}/tools/pptx_to_md.py --input {path}.pptx --output {dir}/{name}.md`；默认 `{name}_media/`；需 `pip install -r requirements.txt`（含 python-pptx）；**旧版 .ppt 不支持**，请先另存为 `.pptx`；图表/SmartArt 等若未以图片形状嵌入则可能仅能从备注或另行导出补全 |
 | 罗列目录、按名找文件 | 目录列举 / 按文件名搜索 |
-| 轻量相似专利初筛（Step 3–4） | 执行前 **`Read`** `prompts/patent_points_analyzer.md`。优先 Google Patents + WebSearch 搜每个拟申请候选点的 1–3 组关键词；网络不可用时在清单中标注「轻量检索未完成，不作为最终可申请结论」 |
+| 轻量相似专利初筛（Step 3–4） | 执行前 **`Read`** `prompts/patent_points_analyzer.md`。优先 **`Bash`** 运行 `tools/gp_search.py -q "英文关键词组" --note "中文原意"`（**全球不限局别**，含 CN 与美欧日韩；先译成英文关键词组补同义词；**一次运行一个请求、不重试，每案至多 5 次**），以 stdout `GP_SEARCH_JSON:` hits 判读（`snippet` 非摘要，不足以支撑「高度相似」判断）；`blocked`（限流，退出码 4）或 `unavailable`（连不上）按该文件「失败分级」标注，仍不完整时写「轻量检索未完成，本清单不构成最终可申请结论」；补充：WebSearch / Google Scholar |
 | 联网查新（Step 5） | 执行前 **`Read`** `prompts/prior_art_search.md`。**中国专利公布公告**：**先探测** `python tools/browser.py --probe`（系统 Chrome/Edge 可用即**禁止** `playwright install chromium`），再优先 **`Bash`** 运行 `cnipa_epub_search.py --type invention|utility_model`（类型与封面一致）；**须在生成命令前**归纳 **3～4 个相关度高的手段短语**（首页上限 4 词，超限拒绝）；**一次进程传入全部词块**（脚本同一浏览器内一词一页、按 `pub_number` 合并，stderr `EPUB_MERGE:`）；单次超时才拆至多两批。第一轮后按 JSON `ipc_codes`/`loc_codes` 抽 1～3 个分类号做**第二轮 `--class` 邻域收口**（一条命令 1 号 × 1 词），再对照 `abstract` **精排打分取 Top 6～8** 写 3.1（`CNIPA_EPUB_ERROR:` 的 `stage`/`hint` 分流失败：`keep_round1` 保留第一轮不降级）。一步拉取+解析、**不写 HTML 落盘**；依赖根目录 `requirements.txt`。**`abstract` 规定必用**同该 prompt。需整句一次 AND 或保存 HTML 时用 `cnipa_epub_crawler.py`；异常或无果再 **WebSearch**（仅第一轮退出码非 0 `skip_epub` / 无 JSON / 空数组且回补无果才降级）。检索结论分流写入 **3.1 现有技术** 与 **3.3 业内尝试** |
 | 图片理解 / 视觉核对（多模态任务） | 委派 **multimodal-vision** 子智能体（Agent 工具，`subagent_type: multimodal-vision`），给图片路径 + 具体问题：Step 2 关键图片（「这是方案架构图，提取模块名、连接关系与数据流」）；Step 8 附图 PNG（「核对流程图 PNG：S1—Sn 步骤号是否在可见标签、节点名是否为标题领域词、有无中文乱码/缺字」）；图片脱敏（「识别图中公司名/产品名/敏感数值」）。结论与文本交叉核对；无该子智能体时回退主代理直接读图 |
 | 公式范式计划与校验（Step 7 含公式时） | 成文前 **`Read`** `references/formulas/paradigms.yaml`（或 `python tools/formula_paradigms.py list`），在案件目录写 **`formula_plan.yaml`**（合同 `references/schemas/formula_plan.schema.yaml`），`python tools/check_formula_plan.py -i …/formula_plan.yaml --eval` 通过后才写 4.2.4；见 `disclosure_builder.md` §7.7 |
@@ -108,7 +109,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, WebSearch, Bash
 ```
 □ 已按步骤 Read 对应 prompts；Step 2 若目录含 Office，已执行 docx_to_md / pptx_to_md 并读了产出 `.md`
 □ 首次运行 Python 脚本前已询问用户 uv 环境选择（uv 项目 / uv run --with 隔离 / 系统 python），选定后同会话沿用；未静默落系统 python、未全局 pip install
-□ Step 3–4 已先输出专利点资产清单：含轻量相似专利初筛结果、四类分类（建议申请/可合并/暂不适合/商业秘密）、评分、理由与推荐组合；已获得用户确认要写的点（除非用户明确跳过清单并已说明）；商业秘密点未写入任何交底正文
+□ Step 3–4 已先输出专利点资产清单：含轻量相似专利初筛结果（gp_search 全球结构化命中或按「失败分级」标注：限流 / 连不上 / 真实 0 命中；每案 gp_search 请求 ≤5 次且未重试）、四类分类（建议申请/可合并/暂不适合/商业秘密）、评分、理由与推荐组合；已获得用户确认要写的点（除非用户明确跳过清单并已说明）；商业秘密点未写入任何交底正文
 □ 专利类型未指定时已默认发明；材料偏实用新型已按需反问；查新已带与封面一致的 --type
 □ 查新完成且写入 3.1/3.3 与区别论述（符合 `prior_art_search.md`：**优先** `tools/cnipa_epub_search.py`，**先 browser.py --probe、一次进程 3～4 词共用浏览器、一词一页、按 pub_number 合并**；第二轮 `--class` 收口 + `abstract` 精排打分取 Top 6～8，3.1 只写精排池；**`abstract` 必用且已充分理解后再概括**；国知局命中项照抄 JSON `link`；仅第一轮失败（`skip_epub`/无 JSON/空数组且回补无果）才降级 WebSearch，第二轮失败保留第一轮不降级）；未因 stderr/乱码误判失败
 □ 除用户明确跳过外，完成摘要预览

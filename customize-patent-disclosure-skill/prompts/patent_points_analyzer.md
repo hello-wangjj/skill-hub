@@ -34,11 +34,21 @@
 
 ### 检索渠道
 
-- **优先**：Google Patents（`https://patents.google.com/`），用候选点的中英文关键词、方法名、核心模块组合检索。
-- **补充**：WebSearch、Google Scholar、CNIPA 公布公告或其它公开专利页。
+- **优先（结构化）**：**`Bash`** 运行本仓库 `tools/gp_search.py`（Google Patents 结构化检索，纯标准库、免登录免 key）。先把候选点**译成英文关键词组并补同义词**（正例 `(battery OR cell) (thermal runaway)`；反例 直接填中文），再执行：
+
+  ```bash
+  python tools/gp_search.py -q "(lidar OR laser radar) (point cloud) (clustering)" --note "点云聚类初筛"
+  ```
+
+  **全球不限局别**（默认含 CN 与美欧日韩，命中池全球去重同族）；初筛不承担替代国知局查新的职责，深度查新仍走 Step 5 公布站渠道。判读以 stdout **`GP_SEARCH_JSON:`**（hits 含 `pub_number`/`title`/`applicant`/`link`/`snippet`）与 **`GP_SEARCH_MD:`**（报告路径）为准；stderr `GP_SEARCH_NOTE:` 是进度不是失败。执行纪律：**一次运行一个请求、不重试、不自行翻页**；每案 **至多 5 次** 请求（多个候选点的关键词组可用 OR 合并成一条查询）。
+- **补充**：WebSearch、Google Scholar 或其它公开专利页（用于 gp_search 失败的候选点或翻译不确定时的复核；结果 URL 仍须打开核验）。
 - 每个「建议申请」或「可合并」的候选点，至少构造 **1–3 组关键词**；每组尽量包含技术对象 + 核心手段，例如「毫米波雷达 多目标跟踪 自适应波门」「点云聚类 航迹代价 关联矩阵」等。
-- 每个候选点最多记录 **0–3 条最相近公开结果**，不要堆无关结果。
-- 若网络、权限或站点限制导致无法完成，必须在清单中显式写明：**「轻量检索未完成，本清单不构成最终可申请结论」**。
+- 每个候选点最多记录 **0–3 条最相近公开结果**，不要堆无关结果；**gp_search 命中按固定格式**：`公开号 + 标题 + 申请人 + link`（抄自 `GP_SEARCH_JSON` hits，勿改写公开号与链接）；技术要点只引 `snippet` 线索并注明「命中片段，非摘要」——**仅凭 snippet 不足以判「高度相似」**，须先打开 `link` 核对标题/摘要。WebSearch 自查结果仍照原规则。
+- **失败分级**（替代笼统的「检索未完成」，逐候选点如实标注）：
+  - 退出码 4，stderr `GP_SEARCH_ERROR: reason=blocked`（限流）→ 标注「海外检索暂被限流」；**本轮结束，不重试、不换参数再发、不用 WebSearch 凑结果冒充 gp_search 命中**；
+  - 退出码 1，`reason=unavailable`（连不上）→ 标注「Google Patents 不可达」；
+  - 退出码 0 且 hits 为空 → 「未发现高相似结果」（**不是**检索未完成）。
+  - 上述标注只覆盖受影响的候选点；其余候选点照常出结果。确有检索未完成且分级无法覆盖时，才写：**「轻量检索未完成，本清单不构成最终可申请结论」**。
 
 ### 相似度等级
 
