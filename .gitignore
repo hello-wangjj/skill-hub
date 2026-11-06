@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache/
 tmp/
 customize-patent-disclosure-skill-workspace/
+
+# 宿主会话缓存（记忆的权威副本在 dotfiles 仓 memory/，本目录不入库）
+.workbuddy/
