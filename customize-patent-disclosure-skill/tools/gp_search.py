@@ -5,10 +5,10 @@
 stderr 打 ``GP_SEARCH_ERROR: reason=blocked``，调用方结束本轮海外检索。
 
 示例：
-  python skills/patent-search/tools/gp_search.py -q "(battery OR cell) (thermal runaway)" --country US,EP,JP
-  python skills/patent-search/tools/gp_search.py --title "gas sensor" --cpc H01M10/48/low --after 2020 --country US
-  python skills/patent-search/tools/gp_search.py --assignee "Contemporary Amperex" --country JP,KR --sort new
-  python skills/patent-search/tools/gp_search.py -q "lamp" --type design --status grant --country US --page 2
+  python tools/gp_search.py -q "(battery OR cell) (thermal runaway)" --country US,EP,JP
+  python tools/gp_search.py --title "gas sensor" --cpc H01M10/48/low --after 2020 --country US
+  python tools/gp_search.py --assignee "Contemporary Amperex" --country JP,KR --sort new
+  python tools/gp_search.py -q "lamp" --type design --status grant --country US --page 2
 
 结果 Markdown 由 ``emit_search_report.py`` 写入 ``outputs/patent-search/``。
 
